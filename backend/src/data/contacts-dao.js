@@ -1,7 +1,5 @@
-import { v4 as uuid } from "uuid";
-import { initialContacts } from "./initial-contacts.js";
+import { Contact } from "./contact-schema.js";
 
-const contacts = [...initialContacts];
 
 /**
  * Retrieves all contacts from the database.
@@ -9,6 +7,7 @@ const contacts = [...initialContacts];
  * @returns a list of contacts
  */
 export async function retrieveContacts() {
+  const contacts = await Contact.find({});
   return contacts;
 }
 
@@ -19,15 +18,10 @@ export async function retrieveContacts() {
  * @returns the newly created contact, including a uniquely generated _id value.
  * @throws error if the contact has no name, or a non-unique name.
  */
-export async function createContact(contact) {
-  if (!contact?.name) throw "New contacts must have a name.";
-
-  const existingContact = contacts.find((c) => c.name === contact.name);
-  if (existingContact) throw `The name '${contact.name}' is already taken.`;
-
-  const dbContact = { _id: uuid(), ...contact };
-  contacts.push(dbContact);
-  return dbContact;
+export async function createContact(contactData) {
+ const dbContact= new Contact(contactData);
+ await dbContact.save();
+ return dbContact;
 }
 
 /**
@@ -37,21 +31,12 @@ export async function createContact(contact) {
  * @returns true if a contact was updated, false otherwise.
  * @throws error if trying to update the contact's name to another name that's already taken.
  */
-export async function updateContact(id, contact) {
-  const index = contacts.findIndex((c) => c._id === id);
-  if (index < 0) return false;
-
-  delete contact._id; // No overwriting the id!
-
-  // Check for duplicate name if required
-  if (contact?.name) {
-    const existingName = contacts.find((c) => c._id !== id && c.name === contact.name);
-    if (existingName) throw `The name '${contact.name}' is already taken.`;
-  }
-
-  contacts[index] = { ...contacts[index], ...contact };
-
-  return contacts[index];
+export async function updateContact(id, updateData) {
+  const updatedContact = await Contact.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true
+  });
+  return updatedContact;
 }
 
 /**
@@ -60,8 +45,5 @@ export async function updateContact(id, contact) {
  * @param id the id to search
  */
 export async function deleteContact(id) {
-  const index = contacts.findIndex((c) => c._id === id);
-  if (index < 0) return;
-
-  contacts.splice(index, 1);
+  await Contact.findByIdAndDelete(id);
 }
